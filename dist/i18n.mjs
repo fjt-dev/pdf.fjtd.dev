@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 const english = {
+  "GitHubでソースを見る": "View source on GitHub",
   "サンプルを開く": "Open sample",
   "ブラウザ内で処理": "Processed in your browser",
   "ファイル名": "File name",

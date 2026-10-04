@@ -29,7 +29,56 @@ python3 -m http.server 8765 --directory dist
 
 Open [localhost:8765](http://localhost:8765) in your browser. Serve the files over HTTP rather than opening `index.html` directly. This server only serves static application files; it does not receive PDFs.
 
-For hosting, serve the contents of `dist/` from a static host. The `.openai/hosting.json` file belongs to the existing private Sites deployment and is not required for local use or other static hosts.
+## Deploy on a VPS
+
+Only `dist/` is served to visitors. The repository contains no processing backend, package installation, or build step. Node.js, a database, and a PDF upload endpoint are not required. Use HTTPS: browser APIs used by this application require a secure context, except on localhost.
+
+An example for Caddy is included in [`deploy/Caddyfile`](deploy/Caddyfile). It serves `dist/` and sets the content types for JavaScript modules and WebAssembly explicitly.
+
+### Initial deployment
+
+1. Install Caddy using its [official installation instructions](https://caddyserver.com/docs/install).
+2. Point the `pdf.fjtd.dev` DNS A record to the VPS IPv4 address. If you publish an AAAA record, it must point to a reachable IPv6 address on the same server. Allow inbound TCP ports 80 and 443.
+3. Clone the repository:
+
+   ```sh
+   sudo git clone https://github.com/fjt-dev/pdf.fjtd.dev.git /srv/pdf.fjtd.dev
+   ```
+
+4. Make sure the Caddy service user can read `/srv/pdf.fjtd.dev/dist` and traverse its parent directories. Configure the site with the supplied example. For a fresh Caddy installation with no existing sites:
+
+   ```sh
+   sudo install -m 644 /srv/pdf.fjtd.dev/deploy/Caddyfile /etc/caddy/Caddyfile
+   sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+   sudo systemctl reload caddy
+   ```
+
+   If Caddy already serves other sites, add the example's site block to your existing configuration instead of replacing the file. Adjust the domain and document root if needed.
+
+5. Open `https://pdf.fjtd.dev` and try the sample document.
+
+Caddy automatically obtains and renews HTTPS certificates when DNS and ports are configured correctly. See its [static file guide](https://caddyserver.com/docs/quick-starts/static-files) and [automatic HTTPS requirements](https://caddyserver.com/docs/automatic-https).
+
+The supplied configuration allows anyone who can reach the domain to open the application. For restricted personal access, configure authentication at the web server or network layer.
+
+### Update an existing deployment
+
+```sh
+sudo git -C /srv/pdf.fjtd.dev pull --ff-only origin main
+```
+
+Static file changes are served immediately. Reload Caddy only when its configuration changes. Users should save their work before reloading the browser tab.
+
+### Repository layout
+
+```text
+dist/              Static application files and required vendor libraries
+deploy/Caddyfile   Example HTTPS configuration for a VPS
+README.md         Usage, deployment instructions, and limitations
+LICENSE           Application license
+```
+
+Nginx or another static server can also serve `dist/`. Configure HTTPS and correct MIME types for `.mjs` (`text/javascript`) and `.wasm` (`application/wasm`). Keep the document root at `dist/` so repository metadata is not served.
 
 ## Usage
 
@@ -59,7 +108,7 @@ Processing and interface responsiveness were checked with a synthetic 100-page t
 
 ## Source and licenses
 
-Application code is licensed under **AGPL-3.0-or-later**. See [LICENSE](LICENSE). Sources are the `.mjs`, HTML, and CSS files in `dist/`. The downloadable `dist/source.zip` contains the application source and bundled library source notices.
+Application code is licensed under **AGPL-3.0-or-later**. See [LICENSE](LICENSE). Sources are the `.mjs`, HTML, and CSS files in `dist/`. The source and license page links to this repository and its ZIP archive, including application files, required libraries, and license notices.
 
 Bundled libraries:
 
@@ -68,7 +117,6 @@ Bundled libraries:
 | MuPDF.js | 1.28.1 | AGPL-3.0-or-later | PDF processing and rendering |
 | PDF-LIB | 1.17.1 | MIT | Sample document generation |
 | JSZip | 3.10.1 | MIT | Image export archives |
-| PDF.js | 4.10.38 | Apache-2.0 | Retained from the initial implementation; unused by the current application |
 
 MuPDF.js is bundled from its unmodified npm distribution. Its matching [upstream source, including submodules](https://github.com/ArtifexSoftware/mupdf/tree/1.28.1), and [WebAssembly build instructions](https://github.com/ArtifexSoftware/mupdf/blob/1.28.1/platform/wasm/BUILDING.md) are available upstream. Library license texts are included in `dist/vendor/`.
 
